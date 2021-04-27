@@ -1,0 +1,134 @@
+import csv
+import numpy as np
+import pandas as pd
+import keras
+from keras import backend as K
+from keras.models import Sequential
+from keras.callbacks import Callback
+from keras.layers import Conv2D, MaxPooling2D, Dropout
+from keras.layers.core import Dense, Flatten, Activation
+from keras.optimizers import Adam
+from keras.metrics import categorical_crossentropy
+from keras.preprocessing.image import ImageDataGenerator
+from keras.layers.normalization import BatchNormalization
+from keras.utils.vis_utils import plot_model
+from keras.preprocessing import image
+from keras.models import Model, load_model
+from keras.applications import imagenet_utils
+from sklearn.metrics import confusion_matrix
+import itertools
+import matplotlib.pyplot as plt
+
+
+train_path = '/home/ubuntu/air_quality/flowers-kaggle/processed_data/train/'
+valid_path = '/home/ubuntu/air_quality/flowers-kaggle/processed_data/val/'
+test_path = '/home/ubuntu/air_quality/flowers-kaggle/processed_data/test/'
+
+# Image Datagenerator
+train_batches = ImageDataGenerator().flow_from_directory(train_path,
+                                                                   target_size=(224, 224),
+                                                                   classes=['daisy','dandelion', 'rose', 'sunflower', 'tulip'],
+                                                                   batch_size=32)
+
+valid_batches = ImageDataGenerator().flow_from_directory(valid_path,
+                                                        target_size=(224, 224),
+                                                        classes=['daisy','dandelion', 'rose', 'sunflower', 'tulip'],
+                                                        batch_size=32)
+
+test_batches = ImageDataGenerator().flow_from_directory(test_path,
+                                                        target_size=(224, 224),
+                                                        classes=['daisy','dandelion', 'rose', 'sunflower', 'tulip'],
+                                                        batch_size=32)
+
+
+# generates batches of normalized data.
+train_batches = ImageDataGenerator(rescale = 1./255).flow_from_directory(train_path,
+                                                                   target_size=(224, 224),
+                                                                   classes=['daisy','dandelion', 'rose', 'sunflower', 'tulip'],
+                                                                   batch_size=32)
+
+valid_batches = ImageDataGenerator(rescale = 1./255).flow_from_directory(valid_path,
+                                                        target_size=(224, 224),
+                                                        classes=['daisy','dandelion', 'rose', 'sunflower', 'tulip'],
+                                                        batch_size=32)
+
+test_batches = ImageDataGenerator(rescale = 1./255).flow_from_directory(test_path,
+                                                        target_size=(224, 224),
+                                                        classes=['daisy','dandelion', 'rose', 'sunflower', 'tulip'],
+                                                        batch_size=32)
+
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(224, 224, 3)))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(128, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(128, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Flatten())
+model.add(Dense(512, activation='relu'))
+model.add(Dense(5, activation='softmax'))
+
+model.compile(Adam(lr=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+history = model.fit_generator(train_batches, epochs=30, steps_per_epoch=81, validation_data=valid_batches)
+print(history.history)
+
+with open('/home/ubuntu/air_quality/breed_replication/no_augmentation/results/no_augmentation.csv', 'w') as f:  # You will need 'wb' mode in Python 2.x
+    w = csv.DictWriter(f, history.history.keys())
+    w.writeheader()
+    w.writerow(history.history)
+
+# save model
+model.summary()
+model.save("/home/ubuntu/air_quality/breed_replication/no_augmentation/models/no_augmentation.h5")
+plot_model(model, to_file='/home/ubuntu/air_quality/breed_replication/no_augmentation/images/no_augmentation_model.png',
+                  show_shapes=True,
+                  show_layer_names=True)
+
+
+# Evaluating the model
+pd.DataFrame(history.history).plot(figsize=(16, 10))
+plt.gca().set_ylim(0, 1)
+plt.title('Model Evaluation')
+plt.savefig('/home/ubuntu/air_quality/breed_replication/no_augmentation/images/no_augmentation_model_evaluation.png')
+plt.show()
+
+def plot_curves():
+  acc = history.history['accuracy']
+  val_acc = history.history['val_accuracy']
+  loss = history.history['loss']
+  val_loss = history.history['val_loss']
+  epochs = range(1, len(acc) + 1)
+
+  plt.plot(epochs, acc, 'bo', label='Training acc')
+  plt.plot(epochs, val_acc, 'b', label='Validation acc')
+  plt.title('Training and validation accuracy')
+  plt.savefig('/home/ubuntu/air_quality/breed_replication/no_augmentation/images/train&val_accuracy.png')
+  plt.legend()
+
+  plt.figure()
+
+  plt.plot(epochs, loss, 'bo', label='Training loss')
+  plt.plot(epochs, val_loss, 'b', label='Validation loss')
+  plt.title('Training and validation loss')
+  plt.savefig('/home/ubuntu/air_quality/breed_replication/no_augmentation/images/train&val_loss.png')
+  plt.legend()
+
+  plt.show()
+
+plot_curves()
+
+# restore the model and do some test set evaluation.
+model = load_model('/home/ubuntu/air_quality/breed_replication/no_augmentation/models/no_augmentation.h5')
+
+# Evaluate the model on the test data using `evaluate`
+print("Evaluate on test data")
+
+results = model.evaluate(test_batches, batch_size=128)
+print("test loss, test acc:", results)
+# print("%s: %.2f%%" % (model.metrics_names[0], results[0]*100))
+# print("%s: %.2f%%" % (model.metrics_names[1], results[1]*100))
+
+# Save as csv
+np.savetxt("/home/ubuntu/air_quality/breed_replication/no_augmentation/results/test_loss&accu.csv", results, delimiter=",")

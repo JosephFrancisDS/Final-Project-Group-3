@@ -9,7 +9,7 @@ from tensorflow.keras import layers
 from glob import glob
 from tqdm import tqdm
 tqdm().pandas()
-from tools import *
+from all_models_no_aug_tools import *
 from sklearn import preprocessing
 
 from tensorflow.keras.applications import InceptionV3, Xception, VGG16, VGG19, ResNet50V2, ResNet101V2, ResNet152V2, \
@@ -107,38 +107,26 @@ print(df_results)
 df_results.to_csv("metrics_no_augmentation.csv", sep=";", index = False)
 dict_hist["no_augmentation"] = history
 
-'''
+
 list_pretrained = [ InceptionV3, VGG16, VGG19, Xception, ResNet50V2, ResNet101V2, ResNet152V2, InceptionResNetV2,
                     MobileNetV2, DenseNet121, DenseNet169, DenseNet201, EfficientNetB0, EfficientNetB4 ]
 
 for model in list_pretrained:
     name = model.__name__
-    # _hists, _df = pretrained_model_classification(train_x, train_y, valid_x, valid_y, x_test, test_y,
-    #                                 _model=model(weights='imagenet', include_top=False, input_shape=(150, 150, 3)),
-    #                                 batch_size=32, epochs_num=30, patience=1, num_classes=5)
-
+    
     x = pretrained_model_classification(train_x, train_y, valid_x, valid_y, x_test, test_y,
                                                   _model=model(weights='imagenet', include_top=False,
                                                                input_shape=(150, 150, 3)),
                                                   batch_size=32, epochs_num=30, patience=1, num_classes=5)
-    x.history
-    # convert the history.history dict to a pandas DataFrame:
-    import pandas as pd
-    hist_df = pd.DataFrame(x.history)
-
-    # or save to csv:
-    hist_csv_file = 'history.csv'
-    with open(hist_csv_file, mode='w') as f:
-        hist_df.to_csv(f)
-
-    x.historyto_csv("results_pretrained.csv", sep=";", index=False)
+    # x.history
+    # # convert the history.history dict to a pandas DataFrame:
+    # import pandas as pd
+    # hist_df = pd.DataFrame(x.history)
     #
-    print(f"Model {name} done with accuracy: {100*_df['acc']}%, precision: {100*_df['prec']}%")
-    
-    dict_hist[name] = _hists
-    df["Name"] = name
-    print(_df)
-    df_results = df_results.append(_df)
-    df_results.to_csv("results_pretrained.csv", sep=";", index = False)
+    # # or save to csv:
+    # hist_csv_file = 'history.csv'
+    # with open(hist_csv_file, mode='w') as f:
+    #     hist_df.to_csv(f)
+    #
+    # x.historyto_csv("results_pretrained.csv", sep=";", index=False)
 
-'''
